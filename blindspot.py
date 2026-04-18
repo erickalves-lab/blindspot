@@ -242,7 +242,55 @@ def gerar_relatorio_excel():
     if opcao == "0":
         encerrar()
 
+def verificar_integridade_projeto():
+    """Verifica integridade dos arquivos antes de iniciar."""
+    from engine.integrity import verificar_integridade, gerar_baseline
+
+    resultado = verificar_integridade()
+
+    if resultado["status"] == "primeira_execucao":
+        print("\033[36m  Primeira execução — gerando baseline de integridade...\033[0m")
+        gerar_baseline()
+        print("\033[32m  Baseline gerado. Arquivos do projeto registrados.\033[0m\n")
+        return True
+
+    if resultado["status"] == "comprometido":
+        print("\033[31m")
+        print("  ⚠️  ALERTA DE INTEGRIDADE")
+        print("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        if resultado["modificados"]:
+            print("  Arquivos modificados desde a última execução:")
+            for f in resultado["modificados"]:
+                print(f"    • {f}")
+        if resultado["ausentes"]:
+            print("  Arquivos ausentes:")
+            for f in resultado["ausentes"]:
+                print(f"    • {f}")
+        print("\033[0m")
+        print("  O que deseja fazer?")
+        print("  \033[36m[1]\033[0m  Continuar mesmo assim (risco)")
+        print("  \033[36m[2]\033[0m  Atualizar baseline (confirmo que as mudanças são legítimas)")
+        print("  \033[36m[0]\033[0m  Sair")
+        print()
+        opcao = input("  Escolha: ").strip()
+
+        if opcao == "2":
+            gerar_baseline()
+            print("\033[32m  Baseline atualizado.\033[0m\n")
+            return True
+        elif opcao == "1":
+            print("\033[33m  Continuando com arquivos modificados...\033[0m\n")
+            return True
+        else:
+            encerrar()
+
+    return True
+
 def main():
+    verificar_integridade_projeto()
+    limpar()
+    print(BANNER)
+
     while True:
         limpar()
         print(BANNER)

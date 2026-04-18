@@ -135,6 +135,21 @@ O BlindSpot não é um exercício acadêmico. É uma ferramenta que resolve um p
 
 ---
 
+## Segurança da Ferramenta
+
+O BlindSpot roda com privilégios elevados e coleta informações sensíveis do ambiente. Por isso, a segurança da própria ferramenta foi tratada com o mesmo rigor que ela aplica nos sistemas que audita.
+
+**Nível 1 — Controle de acesso**
+Todos os arquivos do projeto têm permissão `700`, onde apenas o dono executa e lê. Relatórios Excel e snapshots históricos são gerados com permissão `600`. A ferramenta recusa execução sem sudo.
+
+**Nível 2 — Eliminação de superfície de ataque**
+Todos os comandos do sistema são executados sem passar pelo shell (`shell=False`), eliminando o vetor de shell injection. Os argumentos são passados diretamente aos processos como lista, sem intermediário que possa interpretar caracteres especiais. A ferramenta também verifica a integridade dos seus próprios arquivos via hash SHA-256 antes de cada execução. Se qualquer arquivo for modificado desde a última execução legítima, um alerta é exibido antes de prosseguir.
+
+**Nível 3 — Planejado**
+Assinatura digital dos relatórios gerados e log de auditoria da própria ferramenta.
+
+---
+
 ## Roadmap
 
 - [x] Arquitetura modular em camadas
@@ -143,6 +158,9 @@ O BlindSpot não é um exercício acadêmico. É uma ferramenta que resolve um p
 - [x] Engine de comparação entre execuções
 - [x] Interface CLI interativa com menu
 - [x] Relatório Excel com 4 abas estruturadas
+- [x] Controles de segurança nível 1 — permissões restritivas em arquivos e relatórios
+- [x] Controles de segurança nível 2 — remoção do shell intermediário e verificação de integridade
+- [ ] Controles de segurança nível 3 — assinatura digital de relatórios e log de auditoria da ferramenta
 - [ ] Mapeamento completo para controles ISO 27001 via JSON
 - [ ] Suporte a múltiplos perfis de auditoria (mínimo, padrão, completo)
 - [ ] Exportação de relatório em PDF

@@ -243,3 +243,5 @@ def gerar_relatorio(resultados, scores, score_geral, delta, output_file):
 
     wb.save(output_file)
     return True
+
+    os.chmod(output_file, 0o600)

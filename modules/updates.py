@@ -21,10 +21,11 @@ def executar():
 
 
 def _rodar(cmd):
-    """Executa um comando shell e retorna o stdout."""
+    import shlex
     try:
+        args = cmd if isinstance(cmd, list) else shlex.split(cmd)
         resultado = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30
+            args, shell=False, capture_output=True, text=True, timeout=30
         )
         return resultado.stdout.strip()
     except Exception:

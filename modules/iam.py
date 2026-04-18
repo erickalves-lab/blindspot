@@ -21,10 +21,18 @@ def executar():
 
 
 def _rodar(cmd):
-    """Executa um comando shell e retorna o stdout."""
+    """Executa um comando sem passar pelo shell.
+    Aceita string ou lista de argumentos.
+    """
+    import shlex
     try:
+        args = cmd if isinstance(cmd, list) else shlex.split(cmd)
         resultado = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=10
+            args,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10
         )
         return resultado.stdout.strip()
     except Exception:
@@ -307,4 +315,4 @@ def verificar_grupos_privilegiados():
         "status": "ATENÇÃO",
         "evidencia": evidencia,
         "remediacao": "Confirmar se todos os membros listados têm justificativa para estar nesses grupos",
-    }
+    }# modificado

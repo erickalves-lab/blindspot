@@ -18,3 +18,4 @@ reports/history/*.json
 # Sistema
 .DS_Store
 Thumbs.db
+.blindspot_integrity.json
