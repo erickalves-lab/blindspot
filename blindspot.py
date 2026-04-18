@@ -35,6 +35,7 @@ MENU = """
   \033[36m[6]\033[0m  Updates      — Patches e Atualizações
   \033[36m[7]\033[0m  LGPD         — Privacidade e Dados Pessoais
   \033[36m[8]\033[0m  Todos os módulos
+  \033[36m[9]\033[0m  Gerar relatório Excel
 
 \033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
   \033[90m[0]  Sair\033[0m
@@ -82,6 +83,8 @@ def exibir_resultado(verificacao):
 def rodar_modulo(nome, caminho):
     """Importa e executa um módulo de auditoria."""
     import importlib
+    from engine.scorer import calcular_score
+
     limpar()
     print(BANNER)
     print(f"\033[36m  Executando módulo: {nome}...\033[0m\n")
@@ -92,20 +95,18 @@ def rodar_modulo(nome, caminho):
         for v in verificacoes:
             exibir_resultado(v)
 
-        # Resumo do módulo
-        conformes   = sum(1 for v in verificacoes if v["status"] == "CONFORME")
-        nao_conf    = sum(1 for v in verificacoes if v["status"] == "NÃO CONFORME")
-        atencao     = sum(1 for v in verificacoes if v["status"] == "ATENÇÃO")
-        total       = len(verificacoes)
+        score = calcular_score(verificacoes)
 
         print(f"""
 \033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
   \033[1mRESUMO DO MÓDULO {nome.upper()}\033[0m
 \033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
-  Total de verificações  {total}
-  \033[32mConformes\033[0m              {conformes}
-  \033[31mNão conformes\033[0m          {nao_conf}
-  \033[33mAtenção\033[0m                {atencao}
+  Total de verificações  {score['total']}
+  \033[32mConformes\033[0m              {score['conformes']}
+  \033[31mNão conformes\033[0m          {score['nao_conformes']}
+  \033[33mAtenção\033[0m                {score['atencao']}
+  Conformidade           {score['percentual']}%
+  Score de maturidade    {score['score']} / 3 — {score['nivel']}
 \033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
 """)
 
@@ -125,21 +126,56 @@ def rodar_modulo(nome, caminho):
 def rodar_todos():
     """Executa todos os módulos em sequência."""
     import importlib
+    from datetime import datetime
+    from engine.scorer import calcular_score, calcular_score_geral
+    from engine.comparator import salvar_snapshot, comparar
+
     limpar()
     print(BANNER)
     print("\033[36m  Executando todos os módulos...\033[0m\n")
+
+    scores = {}
 
     for chave, (nome, caminho) in MODULOS.items():
         try:
             modulo = importlib.import_module(caminho)
             verificacoes = modulo.executar()
-            conformes = sum(1 for v in verificacoes if v["status"] == "CONFORME")
-            total = len(verificacoes)
-            print(f"  \033[36m[✔]\033[0m {nome:<12} — {total} verificações | {conformes} conformes")
+            score = calcular_score(verificacoes)
+            scores[nome] = score
+
+            barra = "\033[32m✅\033[0m" if score["score"] >= 2 else "\033[31m❌\033[0m" if score["score"] == 0 else "\033[33m⚠️\033[0m"
+            print(f"  {barra} {nome:<12} — {score['total']} verificações | {score['conformes']} conformes | Score: {score['score']}/3 ({score['nivel']})")
         except Exception as e:
             print(f"  \033[31m[✘]\033[0m {nome:<12} — Erro: {e}")
 
-    print(f"\n\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+    # Score geral
+    geral = calcular_score_geral(scores)
+    print(f"""
+\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
+  \033[1mSCORE GERAL DO AMBIENTE\033[0m
+\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
+  Score geral    {geral['score_geral']} / 3.0
+  Maturidade     {geral['nivel_geral']}
+\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m
+""")
+
+    # Comparação com execução anterior
+    delta = comparar(scores)
+    if delta:
+        print("\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+        print(f"  \033[1mCOMPARAÇÃO COM EXECUÇÃO ANTERIOR\033[0m")
+        print(f"\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+        for modulo, dados in delta.items():
+            print(f"  {modulo:<12} {dados['score_anterior']} → {dados['score_atual']} ({dados['delta_texto']:>3})   {dados['tendencia']}")
+        print(f"\033[34m  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n")
+    else:
+        print("  \033[90m  Primeira execução — nenhum histórico disponível para comparação.\033[0m\n")
+
+    # Salva snapshot
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    salvar_snapshot(scores, timestamp)
+    print(f"  \033[90mSnapshot salvo em reports/history/{timestamp}.json\033[0m\n")
+
     print("\n  O que deseja fazer agora?")
     print("  \033[36m[1]\033[0m  Voltar ao menu principal")
     print("  \033[36m[0]\033[0m  Sair")
@@ -156,6 +192,55 @@ def encerrar():
     print("\033[36m  Auditoria encerrada. Até a próxima.\033[0m\n")
     sys.exit(0)
 
+def gerar_relatorio_excel():
+    """Roda todos os módulos e gera relatório Excel."""
+    import importlib
+    from datetime import datetime
+    from engine.scorer import calcular_score, calcular_score_geral
+    from engine.comparator import salvar_snapshot, comparar
+    from reports.report_engine import gerar_relatorio
+
+    limpar()
+    print(BANNER)
+    print("\033[36m  Coletando dados para o relatório...\033[0m\n")
+
+    resultados = {}
+    scores = {}
+
+    for chave, (nome, caminho) in MODULOS.items():
+        try:
+            modulo = importlib.import_module(caminho)
+            verificacoes = modulo.executar()
+            resultados[nome] = verificacoes
+            scores[nome] = calcular_score(verificacoes)
+            print(f"  \033[36m[✔]\033[0m {nome}")
+        except Exception as e:
+            print(f"  \033[31m[✘]\033[0m {nome} — Erro: {e}")
+
+    score_geral = calcular_score_geral(scores)
+    delta = comparar(scores)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = f"reports/output/blindspot_{timestamp}.xlsx"
+
+    print(f"\n\033[36m  Gerando relatório Excel...\033[0m")
+    sucesso = gerar_relatorio(resultados, scores, score_geral, delta, output_file)
+
+    if sucesso:
+        salvar_snapshot(scores, timestamp)
+        print(f"\n\033[32m  Relatório gerado com sucesso!\033[0m")
+        print(f"  \033[90m{output_file}\033[0m\n")
+    else:
+        print(f"\n\033[31m  Falha ao gerar relatório.\033[0m\n")
+
+    print("\n  O que deseja fazer agora?")
+    print("  \033[36m[1]\033[0m  Voltar ao menu principal")
+    print("  \033[36m[0]\033[0m  Sair")
+    print()
+    opcao = input("  Escolha: ").strip()
+
+    if opcao == "0":
+        encerrar()
 
 def main():
     while True:
@@ -169,6 +254,8 @@ def main():
             encerrar()
         elif opcao == "8":
             rodar_todos()
+        elif opcao == "9":
+            gerar_relatorio_excel()
         elif opcao in MODULOS:
             nome, caminho = MODULOS[opcao]
             rodar_modulo(nome, caminho)
