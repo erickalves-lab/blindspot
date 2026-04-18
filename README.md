@@ -67,16 +67,14 @@ Os controles normativos ficam em arquivos JSON separados do código. Cada contro
 ---
 
 ## Módulos
-
-| Módulo | Domínio | Controles | Verificações |
-|---|---|---|---|
-| `iam` | Identidades e Acessos | ISO 27001 A.5.15, A.5.18, A.8.2, A.8.5 | 6 |
-| `ssh` | Configuração SSH | ISO 27001 A.8.20, A.8.5 / CIS 5.2 | 6 |
-| `network` | Rede e Firewall | ISO 27001 A.8.20, A.8.21 / CIS 3.5 | 6 |
-| `filesystem` | Permissões e Arquivos | ISO 27001 A.5.12, A.5.13, A.8.3 | 5 |
-| `logs` | Auditoria e Retenção | ISO 27001 A.8.15, A.8.16 | 6 |
-| `updates` | Patches e Atualizações | ISO 27001 A.8.8 / CIS 1.9 | 5 |
-| `lgpd` | Privacidade e Dados Pessoais | LGPD Art. 46, 48, 49 / ISO 27001 A.5.34 | 5 |
+```text
+blindspot/
+├── blindspot.py        # Interface CLI — menu interativo e orquestração
+├── modules/            # Camada de coleta — cada módulo audita um domínio
+├── engine/             # Camada de análise — scoring e comparação
+├── mappings/           # Base normativa — controles ISO 27001, NIST CSF e LGPD em JSON
+└── reports/            # Camada de saída — gerador de relatório Excel
+```
 
 **Total: 39 verificações automatizadas em 7 domínios.**
 
